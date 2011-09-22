@@ -1,0 +1,464 @@
+<html><head> 
+<meta http-equiv="content-type" content="text/html; charset=ISO-8859-1"> 
+ 
+  <title>jflySim + qqTimer</title> 
+  <style type="text/css"> 
+.a {
+ color: blue;
+ text-decoration: underline;
+ cursor: pointer }
+.b {
+ cursor: pointer }
+span.b:hover {
+ color: red }
+  </style> 
+  <script type="text/javascript"> 
+<!--
+
+var times;
+var notes;
+var comments;
+var scrambleArr;
+var highlightStart;
+var highlightStop;
+var highlightID;
+var useMilli = false;
+var showOptions = false;
+var penalty = 0;
+var usemean3 = false;
+var simScramble;
+var puzzleMap = {PyraSim: "edu.berkeley.gcweb.gui.gamescubeman.Pyraminx.Pyraminx", MegaSim: "edu.berkeley.gcweb.gui.gamescubeman.OldMegaminx.OldMegaminx",
+ CuboidSim: "edu.berkeley.gcweb.gui.gamescubeman.Cuboid.Cuboid", SquareOneSim: "edu.berkeley.gcweb.gui.gamescubeman.SquareOne.SquareOne"};
+ 
+// statistics
+var avgSizes, bestAvg, lastAvg, bestAvgIndex, bestTime, bestTimeIndex, worstTime, worstTimeIndex;
+ 
+function initialize() {
+ var cls = null;
+ if (window.location.href.match(/#.+/)) {
+  cls = String(window.location.href.match(/#.+/)).substr(1);
+ }
+ if(!(cls in puzzleMap))
+  cls = "CuboidSim";
+ if (document.getElementById('puzzleSpan').innerHTML.length == 0)
+  setApplet(cls);
+	
+ var puzzles = "";
+ for(var puzzle in puzzleMap) {
+  puzzles += "<a href='#" + puzzle + "' onclick=\"setApplet('" + puzzle + "');\">" + puzzle + "</a>&nbsp;";
+ }
+ document.getElementById('puzzles').innerHTML = puzzles;
+ 
+ avgSizes = [3,5,12,100,1000];
+ bestAvg = [[-1,0],[-1,0],[-1,0],[-1,0],[-1,0]];
+ lastAvg = [[-1,0],[-1,0],[-1,0],[-1,0],[-1,0]];
+ bestAvgIndex = [0,0,0,0,0];
+ bestTime = -1;
+ bestTimeIndex = 0;
+ worstTime = -1;
+ worstTimeIndex = 0;
+ times = [];
+ notes = [];
+ comments = [];
+ scrambleArr = [];
+ clearHighlight();
+ loadList();
+ getStats(true);
+ 
+ useMilli = (getCookie("useMilli") == 1) ? true : false;
+ document.getElementById('millisec').innerHTML = useMilli ? "1\/100 sec" : "1\/1000 sec";
+ usemean3 = (getCookie("usemean3") == 1) ? true : false;
+ document.getElementById('mean3').innerHTML = usemean3 ? "don't use" : "use";
+}
+
+function setApplet(puztype) {
+ var appletHTML = "<applet id='puzzle' code='edu.berkeley.gcweb.gui.gamescubeman.PuzzleUtils.GamesCubeMan' archive='GamesCubeMan.jar' height='500' width='400' mayscript='true'>";
+ appletHTML += "<param name='puzzle_class' value='" + puzzleMap[puztype] + "' />";
+ appletHTML += "<param name='bg_color' value='#ffffff' />";
+ appletHTML += "<param name='fg_color' value='#000000' />";
+ appletHTML += "<param name='free_rotation' value='true' />";
+ appletHTML += "<param name='free_rotation_spin' value='false' />";
+ appletHTML += "<param name='show_history' value='false' />";
+ appletHTML += "<param name='distance' value='5' />";
+ appletHTML += "<param name='edit' value='true' />";
+ appletHTML += "</applet><br />";
+ document.getElementById("puzzleSpan").innerHTML = appletHTML;
+}
+ 
+function resetTimes() {
+ if (confirm("Are you sure you want to delete ALL of your times?")) {
+  initialize();
+ }
+}
+ 
+function loadList() {
+ var data = [-1], s = "times (<span onclick='resetTimes();' class='a'>reset</span>):<br>"
+ // get the best and worst time for the highlighted average
+ if (highlightStop != -1 && (highlightStop - highlightStart) > 2) {
+  data = getAvg(highlightStart, highlightStop - highlightStart + 1);
+ }
+ for (var i = 0; i < times.length; i++) {
+  if (i == highlightStart) {s += "<span style='background-color: yellow'>";}
+  if (i == highlightStart + data[1] || i == highlightStart + data[2]) s += "(";
+  var time = times[i];
+  if (notes[i] == 0) {s += "<span onclick='del(" + i + ");' class='b'>" + pretty(time);}
+  else if (notes[i] == 2) {s += "<span onclick='del(" + i + ");' class='b'>" + pretty(time + 2000) + "+";}
+  else {s += "<span onclick='del(" + i + ");' class='b'>DNF(" + pretty(time) + ")";}
+  s += (comments[i] ? "[" + comments[i] + "]" : "") + "<\/span>";
+  if (i == highlightStart + data[1] || i == highlightStart + data[2]) s += ")";
+  if (i == highlightStop) {s += "<\/span>";}
+  s += (i == times.length - 1) ? " " : ", ";
+ }
+ document.getElementById('theList').innerHTML = s;
+}
+ 
+function del(index) {
+ if (confirm("Are you sure you want to delete the " +
+     pretty((notes[index]==1)?-1:times[index]+1000*notes[index]) + "?")) {
+  for (var i = index; i < times.length - 1; i++) {
+   times[i] = times[i+1];
+   notes[i] = notes[i+1];
+   comments[i] = comments[i+1];
+   scrambleArr[i] = scrambleArr[i+1];
+  }
+  times.pop();
+  notes.pop();
+  comments.pop();
+  scrambleArr.pop();
+  clearHighlight();
+  loadList();
+  getStats(true);
+ }
+}
+ 
+function getStats(recalc) {
+ var numdnf=0, sessionavg, sessionmean;
+ if (recalc) {
+  var theStats = getAllStats();
+  numdnf = theStats[0];
+  sessionavg = theStats[1];
+  sessionmean = theStats[2];
+ } else {
+  // update averages and best time / worst time.
+  var index = times.length - 1;
+  var thisTime = (notes[index] == 1) ? -1 : times[index] + notes[index] * 1000;
+  if (bestTime < 0 || (thisTime != -1 && thisTime < bestTime)) {
+   bestTime = thisTime;
+   bestTimeIndex = index;
+  }
+  if (thisTime > worstTime) {
+   worstTime = thisTime;
+   worstTimeIndex = index;
+  }
+  for (var j = usemean3 ? 0 : 1; j < 5; j++) {
+   if (times.length < avgSizes[j]) {
+    break;
+   } else {
+    lastAvg[j] = (j==0) ? getMeanSD(times.length - avgSizes[j], avgSizes[j]) : getAvgSD(times.length - avgSizes[j], avgSizes[j]);
+    if (bestAvg[j][0] < 0 || (lastAvg[j][0] != -1 && lastAvg[j][0] < bestAvg[j][0])) {
+     bestAvg[j] = lastAvg[j];
+     bestAvgIndex[j] = times.length - avgSizes[j];
+    }
+   }
+  }
+  var sessionsum = 0;
+  for (var i = 0; i < times.length; i++) {
+   var thisTime = (notes[i] == 1) ? -1 : times[i] + notes[i] * 1000;
+   if (thisTime == -1) {numdnf++;}
+   else {sessionsum += thisTime;}
+  }
+  sessionavg = getAvgSD(0, times.length);
+  sessionmean = (numdnf == times.length) ? -1 : (sessionsum / (times.length - numdnf));
+ }
+ 
+ var s = "stats:<br>number of times: " + (times.length - numdnf) + "/" + times.length;
+ s += "<br>best time: <span onclick='setHighlight(" + bestTimeIndex + ",1,0);loadList();' class='a'>";
+ s += pretty(bestTime) + "<\/span><br>worst time: <span onclick='setHighlight(" + worstTimeIndex;
+ s += ",1,1);loadList();' class='a'>" + pretty(worstTime) + "<\/span><br>";
+ if (usemean3 && times.length >= 3) {
+  s += "<br>current mean of 3: <span onclick='setHighlight(" + (times.length - 3) + ",3,31);";
+  s += "loadList();' class='a'>" + pretty(lastAvg[0][0]) + "<\/span> (&sigma; = " + trim(lastAvg[0][1], 2);
+  s += ")<br>best mean of 3: <span onclick='setHighlight(" + bestAvgIndex[0] + ",3,30);loadList();'";
+  s += " class='a'>" + pretty(bestAvg[0][0]) + "<\/span> (&sigma; = " + trim(bestAvg[0][1], 2) + ")<br>";
+ }
+ document.getElementById('stats').innerHTML += avgSizes;
+ for (var j = 1; j < 5; j++) {
+  if (times.length >= avgSizes[j]) {
+   s += "<br>current avg" + avgSizes[j] + ": <span onclick='setHighlight(" + (times.length - avgSizes[j]);
+   s += "," + avgSizes[j] + "," + avgSizes[j] + "1);loadList();' class='a'>" + pretty(lastAvg[j][0]);
+   s += "<\/span> (&sigma; = " + trim(lastAvg[j][1], 2) + ")<br>";
+   s += "best avg" + avgSizes[j] + ": <span onclick='setHighlight(" + bestAvgIndex[j];
+   s += "," + avgSizes[j] + "," + avgSizes[j] + "0);loadList();' class='a'>" + pretty(bestAvg[j][0]);
+   s += "<\/span> (&sigma; = " + trim(bestAvg[j][1], 2) + ")<br>";
+  }
+ }
+ s += "<br>session avg: <span onclick='setHighlight(0," + times.length + ",2);loadList();' class='a'>";
+ s += pretty(sessionavg[0]) + "<\/span> (&sigma; = " + trim(sessionavg[1], 2) + ")<br>session mean: " + pretty(sessionmean);
+ document.getElementById('stats').innerHTML = s;
+}
+ 
+function getAllStats() {
+ bestAvg = [[-1,0],[-1,0],[-1,0],[-1,0],[-1,0]];
+ lastAvg = [[-1,0],[-1,0],[-1,0],[-1,0],[-1,0]];
+ bestAvgIndex = [0,0,0,0,0];
+ bestTime = -1;
+ bestTimeIndex = 0;
+ worstTime = -1;
+ worstTimeIndex = 0;
+ var numdnf = 0;
+ var sessionsum = 0;
+ for (var i = 0; i < times.length; i++) {
+  var thisTime = (notes[i] == 1) ? -1 : times[i] + notes[i] * 1000;
+  if (bestTime < 0 || (thisTime != -1 && thisTime < bestTime)) {
+   bestTime = thisTime;
+   bestTimeIndex = i;
+  }
+  if (thisTime > worstTime) {
+   worstTime = thisTime;
+   worstTimeIndex = i;
+  }
+  if (thisTime == -1) {numdnf++;}
+  else {sessionsum += thisTime;}
+  // calculate averages
+  for (var j = usemean3 ? 0 : 1; j < 5; j++) {
+   if (times.length - i < avgSizes[j]) {
+    break;
+   } else {
+    lastAvg[j] = (j==0) ? getMeanSD(i, avgSizes[j]) : getAvgSD(i, avgSizes[j]);
+    if (bestAvg[j][0] < 0 || (lastAvg[j][0] != -1 && lastAvg[j][0] < bestAvg[j][0])) {
+     bestAvg[j] = lastAvg[j];
+     bestAvgIndex[j] = i;
+    }
+   }
+  }
+ }
+ var sessionavg = getAvgSD(0, times.length);
+ var sessionmean = (numdnf == times.length) ? -1 : (sessionsum / (times.length - numdnf));
+ 
+ return [numdnf, sessionavg, sessionmean];
+}
+ 
+function setHighlight(start, nsolves, id) {
+ // if we're trying to set a highlight that has same ID as the current one, clear it.
+ if (id == highlightID) {
+  clearHighlight();
+ } else {
+  highlightStart = start;
+  highlightStop = start + nsolves - 1;
+  highlightID = id;
+  if (times.length == 0) return;
+  var data = [0,-1,-1];
+  if (highlightStop != -1 && (highlightStop - highlightStart) > 2) {
+   data = getAvg(highlightStart, highlightStop - highlightStart + 1);
+  }
+  var s="";
+  if (id > 1) {
+   s += (id==2)?"Session average":(id==30|id==31)?"Mean of 3":("Average of "+Math.floor(id/10));
+   s += ": " + pretty((id==30||id==31)?getMeanSD(start,nsolves)[0]:data[0]) + "<br>";
+  }
+  for (var i=0; i<nsolves; i++) {
+   s += (i+1) + ". ";
+   if (i == data[1] || i == data[2]) s += "(";
+   s += pretty((notes[start+i]==1)?-1:times[start+i]+notes[start+i]*1000) + ((notes[start+i]==2)?"+":"");
+   s += (comments[i] ? "[" + comments[i] + "]" : "");
+   if (i == data[1] || i == data[2]) s += ")";
+   s += " &nbsp; " + scrambleArr[start+i] + "<br>";
+  }
+  document.getElementById('avgdata').innerHTML = "<td colspan='3'>" + s + "<\/td>";
+  document.getElementById('avgdata').style.display = "";
+ }
+}
+ 
+function clearHighlight() {
+ highlightStart = -1;
+ highlightStop = -1;
+ highlightID = -1;
+ document.getElementById('avgdata').style.display = "none";
+}
+ 
+// just gets the average
+function getAvg(start, nsolves) {
+ if (nsolves < 3) {return [-1,-1,-1];}
+ var best = -1;
+ var bestindex;
+ var worst = -1;
+ var worstindex;
+ var sum = 0;
+ var numdnf = 0;
+ // get the average
+ for (var j = 0; j < nsolves; j++) {
+  var thisTime = (notes[start + j] == 1) ? -1 : times[start + j] + notes[start + j] * 1000;
+  if (thisTime == -1) {numdnf++;}
+  if (best < 0 || (thisTime != -1 && thisTime < best)) {best = thisTime; bestindex = j;}
+  if (j == 0 || thisTime == -1 || (worst != -1 && thisTime > worst)) {worst = thisTime; worstindex = j;}
+  sum += thisTime;
+ }
+ var avg = (sum - best - worst) / (nsolves - 2);
+ return [((numdnf < 2) ? avg : -1), bestindex, worstindex];
+}
+ 
+// gets average and SD
+function getAvgSD(start, nsolves) {
+ var data = getAvg(start, nsolves);
+ var variance = 0;
+ for (var j = 0; j < nsolves; j++) {
+  var thisTime = (notes[start + j] == 1) ? -1 : times[start + j]/1000 + notes[start + j];
+  if (j != data[1] && j != data[2]) variance += Math.pow(thisTime - data[0]/1000, 2);
+ }
+ return [data[0], Math.sqrt(variance / (nsolves - 2.))];
+}
+ 
+function getMeanSD(start, nsolves) {
+ var sum = 0, numdnf = 0;
+ for (var j = 0; j < nsolves; j++) {
+  var thisTime = times[start + j] + notes[start + j] * 1000;
+  if (notes[start+j] != 1) {
+   sum += thisTime;
+   if (thisTime == -1) sum = -1;
+  }
+  if (notes[start+j] == 1) numdnf++;
+ }
+ var mean = (numdnf==0) ? sum / nsolves : -1;
+ var variance = 0; 
+ for (var j = 0; j < nsolves; j++) {
+  var thisTime = (notes[start + j] == 1) ? -1 : times[start + j]/1000 + notes[start + j];
+  variance += Math.pow(thisTime - mean/1000, 2);
+ }
+ return [mean, Math.sqrt(variance / nsolves)];
+}
+ 
+function trim(number, nDigits) {
+ if (!number || number == Number.POSITIVE_INFINITY || number == Number.NEGATIVE_INFINITY) number = 0;
+ var power = Math.pow(10, nDigits);
+ var trimmed = "" + Math.round(number * power);
+ while (trimmed.length < nDigits + 1) {
+  trimmed = "0" + trimmed;
+ }
+ var len = trimmed.length;
+ return trimmed.substr(0,len - nDigits) + "." + trimmed.substr(len - nDigits, nDigits);
+}
+ 
+function pretty(time) {
+ if (time < 0) {return "DNF";}
+ time = Math.round(time / (useMilli ? 1 : 10));
+ var bits = time % (useMilli ? 1000 : 100);
+ time = (time - bits) / (useMilli ? 1000 : 100);
+ var secs = time % 60;
+ var mins = ((time - secs) / 60) % 60;
+ var hours = (time - secs - 60 * mins) / 3600;
+ var s = "" + bits;
+ if (bits < 10) {s = "0" + s;}
+ if (bits < 100 && useMilli) {s = "0" + s;}
+ s = secs + "." + s;
+ if (secs < 10 && (mins > 0 || hours > 0)) {s = "0" + s;}
+ if (mins > 0 || hours > 0) {s = mins + ":" + s;}
+ if (mins < 10 && hours > 0) {s = "0" + s;}
+ if (hours > 0) {s = hours + ":" + s;}
+ return s;
+}
+ 
+function changeNotes(i) {
+ // 0 is normal solve, 1 is DNF, 2 is +2
+ notes[notes.length - 1] = i;
+ clearHighlight();
+ loadList();
+ getStats(true);
+}
+ 
+function toggleMilli() {
+ useMilli ^= 1;
+ setCookie("useMilli", (useMilli == true ? 1 : 0));
+ document.getElementById('millisec').innerHTML = useMilli ? "1\/100 sec" : "1\/1000 sec";
+ loadList();
+ getStats(true);
+}
+ 
+function toggleOptions() {
+ showOptions ^= 1;
+ document.getElementById('showOpt').innerHTML = showOptions ? "hide" : "show";
+ document.getElementById('options').style.display = showOptions ? "" : "none"; 
+}
+ 
+function toggleMean3() {
+ usemean3 ^= 1;
+ setCookie("usemean3", (usemean3 ? 1 : 0));
+ document.getElementById('mean3').innerHTML = usemean3 ? "don't use" : "use";
+ getStats(usemean3==1);
+}
+ 
+function comment() {
+ var newComment = prompt("Enter your comment for the most recent solve:",comments[comments.length-1]);
+ if (newComment != null) comments[comments.length-1] = newComment;
+ loadList();
+}
+ 
+/* setCookie and getCookie function from http://www.quirksmode.org/js/cookies.html */
+function setCookie(name,value) {
+ // cookies expire in year 3000 by default
+ var expires = "; expires=" + new Date(3000, 00, 01).toGMTString();
+ document.cookie = name + "=" + value + expires + "; path=/";
+}
+function getCookie(name) {
+ var nameEQ = name + "=";
+ var ca = document.cookie.split(';');
+ for(var i=0;i < ca.length;i++) {
+  var c = ca[i];
+  while (c.charAt(0)==' ') c = c.substring(1,c.length);
+  if (c.indexOf(nameEQ) == 0) return c.substring(nameEQ.length,c.length);
+ }
+ return null;
+}
+
+function timerReset() {
+ addTimeHelper(0, true);
+}
+
+function inspectionStarted(newScramble) {
+ simScramble = newScramble;
+}
+
+function timerStarted() {
+}
+
+function timerStopped(time) {
+ addTimeHelper(time*1000, false);
+}
+
+function addTimeHelper(time, isDNF) {
+ times[times.length] = time;
+ notes[notes.length] = isDNF ? 1 : 0;
+ comments[comments.length] = "";
+ scrambleArr[scrambleArr.length] = simScramble;
+ clearHighlight();
+ loadList();
+ getStats(false);
+}
+ 
+// -->
+ </script> 
+</head><body onload="initialize()">
+ <table border="1" cellpadding="5" cellspacing="0" width="100%"> 
+  <tr> 
+   <td align="center"> 
+    <span id="showOpt" onclick="toggleOptions()" class="a">show</span> timer options<br>
+    <span id="puzzleSpan"></span>
+    that time was: <span onclick="changeNotes(0);" class="a">no penalty</span> <span onclick="changeNotes(2);" class="a">+2</span> <span onclick="changeNotes(1);" class="a">DNF</span> | <span onclick="comment();" class="a">leave comment</span> 
+   </td> 
+   <td style="width: 15em;"> 
+    <div id="theList" style="overflow-y: scroll; height: 550px;">times (<span onclick="resetTimes();" class="a">reset</span>):</div> 
+   </td> 
+   <td style="width: 15em;"> 
+    <div id="stats" style="overflow-y: scroll; height: 550px;">stats:</div> 
+   </td> 
+  </tr> 
+  <tr id="options" style="display: none;"> 
+   <td colspan="3">  
+    display time to <span id="millisec" onclick="toggleMilli()" class="a">1/1000 sec</span><br> 
+    <span id="mean3" onclick="toggleMean3()" class="a">use</span> mean of 3<br>
+    <span id="puzzles"></span>
+   </td> 
+  </tr> 
+  <tr id="avgdata" style="display: none;"> 
+  </tr> 
+ </table> 
+</body></html>

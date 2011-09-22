@@ -1,0 +1,77 @@
++animating same axis simultaneously
++customizable keys
+	+spacebar for scramble
++BUG: hand positions
++babyface + void (michael gottlieb)
++BUG: pressing reset or changing gap while turning = bad
++BUG: changing size doesn't reset hand positions
++BUG: changing size while scrambling = bad
++BUG: adjusting gap resets cube :(
++textbox w/ notation pressed (lucas garron)
+	+trivial move cancellations (michael gottlieb)
++slider for turning speed
++BUG: w/ mac os x (email dan cohen) java 5
++BUG: w/ opera (patrick jameson)
++store key layout and color scheme (on a per puzzle basis) in cookies
++turns should be really disabled during scramble, not just queued
++move-value history doesn't sync when pressing reset
++importing state of cube doesn't work
++many turns that should be legal aren't allowed
++create a help that shows the legal turns and the move-values of each
++don't stop inspection when doing cube rotations
++pyraminx
++key customizer is broken
+
+TODO:
+-(like 0-0-200), and the orange on cuboidsim lighter (like 255-200-50)?
+-It would be really cool to be able to customize the Square-1, just like the cuboids can be customized. I was thinking of something like this:
+	- The top and bottom would be a Z-gon, so normally Z is 4 but it could be any integer >2.
+	- Corners and edges would alternate, with their sizes in an X:Y ratio. (Default is 2:1.) I suggest keeping X and Y small, like at most 3.
+	-If Z is even you can always do turns, but if Z is odd you need X:Y to be 1:1 or else the puzzle cannot be turned.
+-insta scrambling
+-adjusting gap broken in cuboid and sq1
+-babyface + timing is broken?
+-generalize to an animation simulator
+	-generators, solves, pre-moves,
+	-color schemes/key layouts
+	-enable/disable spin view
+	-save state? ask lucas...
+-scramble progress bar?
+-hand positions indicator
+-Square One Variations
+	-4 layer sq 1
+	-3 layer Flower (put only corners in top and bottom layers and build up middle to match)
+	-2 layer Flower (remove middle layer instead)
+	-Barrel (put only edges in top and bottom layer and cut middle to match)
+	+2 layer sq 1
+	+Square 2 (unbandaged)
+-super cuboids
+
+GAMESCRAFTERS:
+-solve square 1
+-go from any position to any position
+-how far can we go with 3x3x3?
+-make hongchen's corner chooser live
+-move buttons to the side
+
+-update page keyboard when the applet's key layout changes
+-lots of flickering on firefox mac?
+
+***Cuboid/Hongcheng***
++changed reset button into change view
++fix sticker color picker
++can't restart choosing corners
++removed misc code (_nullColors?)
++merge hongcheng's stuff with mine
++something broke other puzzles, fixed now =)
++Dan had given me some feedback Monday.  One thing he asked is if we can move the cube down little bit once cornerChooser is selected so the JPanel does not block the cube. Is it hard to get the thing fixed? If you have time, would you change the code? The setVisible function is in line 403 of cornerChooser. Or if you are busy you can tell me how to do it and I'd be gald to do it tomorrow.
+-clicking to choose corner doesn't work anymore?
+-turning while changing gap
+
+***Oskar's***
++fix painters algorithm
+-well view of oscar's cube
+-invisible closest faces
+-black slit in oscar's cube (RedFace.java)
+-fix oscar's w/ stick
+
