@@ -1,7 +1,6 @@
 package edu.berkeley.gcweb.gui.gamescubeman.ThreeD;
 
 import java.text.DecimalFormat;
-import java.util.ArrayList;
 import java.util.Arrays;
 
 public class RotationMatrix {
@@ -15,29 +14,19 @@ public class RotationMatrix {
 	private RotationMatrix(double[][] data) {
 		this.data = data;
 	}
-	private int axis;
-	private double degreesCCW;
-	public RotationMatrix(int axis, double degreesCCW) {
-		this.axis = axis;
-		this.degreesCCW = degreesCCW;
-		this.data = new double[SIZE][SIZE];
-		ArrayList<Integer> rows = new ArrayList<Integer>(Arrays.asList(0, 1, 2));
-		rows.remove(new Integer(axis));
-		double sin = (axis == 1 ? -1 : 1) * Math.sin(Math.toRadians(degreesCCW));
-		double cos = Math.cos(Math.toRadians(degreesCCW));
-		for(int c = 0; c < SIZE; c++) {
-			if(c == axis) {
-				data[c][c] = 1;
-			} else {
-				data[rows.get(0)][c] = cos;
-				data[rows.get(1)][c] = sin;
-				double s = sin;
-				sin = cos;
-				cos = -s;
-			}
-		}
+	private static int toBit(boolean b) {
+		return b ? 1 : 0;
 	}
+	public RotationMatrix(int axis, double degreesCCW) {
+		this(toBit(axis==0), toBit(axis==1), toBit(axis==2), degreesCCW);
+	}
+	private double lx, ly, lz;
+	private double degreesCCW;
 	public RotationMatrix(double lx, double ly, double lz, double degreesCCW) {
+		this.lx = lx;
+		this.ly = ly;
+		this.lz = lz;
+		this.degreesCCW = degreesCCW;
 		//normalizing the vector to rotate about
 		double lx2 = lx*lx; double ly2 = ly*ly; double lz2 = lz*lz;
 		double scale = Math.sqrt(lx2 + ly2 + lz2);
@@ -47,9 +36,9 @@ public class RotationMatrix {
 		double c = Math.cos(Math.toRadians(degreesCCW));
 		double s = Math.sin(Math.toRadians(degreesCCW));
 		data = new double[][] {
-				{ lx2 + (1-lx2)*c, lx*ly*(1-c) - lz*s, lx*lz*(1-c) + ly*s },
-				{ lx*ly*(1-c) + lz*s, ly2 + (1-ly2)*c, ly*lz*(1-c) - lx*s },
-				{ lx*lz*(1-c) - ly*s, ly*lz*(1-c) + lx*s, lz2 + (1-lz2)*c }
+				{ lx2 + (1-lx2)*c, lx*ly*(1-c) + lz*s, lx*lz*(1-c) - ly*s },
+				{ lx*ly*(1-c) - lz*s, ly2 + (1-ly2)*c, ly*lz*(1-c) + lx*s },
+				{ lx*lz*(1-c) + ly*s, ly*lz*(1-c) - lx*s, lz2 + (1-lz2)*c }
 		};
 	}
 	public RotationMatrix multiply(RotationMatrix m) {
@@ -67,11 +56,11 @@ public class RotationMatrix {
 		}
 		return result;
 	}
-	public double[] multiply(double[] pnt) {
-		return transpose(multiply(new RotationMatrix(transpose(new double[][]{ pnt }))).data)[0];
+	public double[] leftMultiply(double[] point) {
+		return new RotationMatrix(new double[][]{ point }).multiply(this).data[0];
 	}
-	public double[] multiply(double x, double y, double z) {
-		return multiply(new double[] { x, y, z });
+	public double[] leftMultiply(double x, double y, double z) {
+		return leftMultiply(new double[] { x, y, z });
 	}
 	private double[][] transpose(double[][] m) {
 		double[][] t = new double[m[0].length][m.length];
@@ -81,7 +70,7 @@ public class RotationMatrix {
 		return t;
 	}
 	public RotationMatrix scaleRotation(double scale) {
-		return new RotationMatrix(axis, scale*degreesCCW);
+		return new RotationMatrix(this.lx, this.ly, this.lz, scale*degreesCCW);
 	}
 	public boolean isIdentity() {
 		return isIdentity(0);
@@ -117,5 +106,8 @@ public class RotationMatrix {
 		System.out.println(new RotationMatrix(1, 30.));
 		System.out.println(new RotationMatrix(1, 30./5));
 		System.out.println(new RotationMatrix(1, 30.).multiply(new RotationMatrix(0, 180.)));
+		
+		System.out.println(new RotationMatrix(2, 90));
+		System.out.println(Arrays.toString(new RotationMatrix(2, 90).leftMultiply(new double[] { 1, 0, 0 })));
 	}
 }

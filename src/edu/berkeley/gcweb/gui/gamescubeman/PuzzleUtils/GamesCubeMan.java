@@ -50,9 +50,9 @@ public class GamesCubeMan extends JApplet implements ActionListener, PuzzleState
 	private JButton changeView, scramble, resetPuzzle;
 	private JTextField turnHistoryField;
 
-//	private String puzzle_class = "edu.berkeley.gcweb.gui.gamescubeman.Cuboid.Cuboid";
+	private String puzzle_class = "edu.berkeley.gcweb.gui.gamescubeman.Cuboid.Cuboid";
 //	private String puzzle_class = "edu.berkeley.gcweb.gui.gamescubeman.Pyraminx.Pyraminx";
-	private String puzzle_class = "edu.berkeley.gcweb.gui.gamescubeman.SquareOne.SquareOne";
+//	private String puzzle_class = "edu.berkeley.gcweb.gui.gamescubeman.SquareOne.SquareOne";
 	
 	private ColorOption bg_color = new ColorOption("bg_color", false, Color.GRAY);
 	private ColorOption fg_color = new ColorOption("fg_color", false, Color.WHITE);
@@ -484,30 +484,38 @@ public class GamesCubeMan extends JApplet implements ActionListener, PuzzleState
 	}
 
 	public void inspectionStarted(String scramble) {
+		if(jso == null) { return; }
 		try {
 			jso.call("inspectionStarted", new Object[] { scramble });
 		} catch (Exception e) {
+			e.printStackTrace();
 		}
 	}
 
 	public void timerReset() {
+		if(jso == null) { return; }
 		try {
 			jso.call("timerReset", new Object[0]);
 		} catch (Exception e) {
+			e.printStackTrace();
 		}
 	}
 
 	public void timerStarted() {
+		if(jso == null) { return; }
 		try {
 			jso.call("timerStarted", new Object[0]);
 		} catch (Exception e) {
+			e.printStackTrace();
 		}
 	}
 
 	public void timerStopped(double time) {
+		if(jso == null) { return; }
 		try {
 			jso.call("timerStopped", new Object[] { time });
 		} catch (Exception e) {
+			e.printStackTrace();
 		}
 	}
 

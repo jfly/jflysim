@@ -84,7 +84,7 @@ public class Polygon3D implements Comparable<Polygon3D> {
 
 	public Polygon3D rotate(RotationMatrix m) {
 		for(int i = 0; i < points.size(); i++)
-			points.set(i, m.multiply(points.get(i)));
+			points.set(i, m.leftMultiply(points.get(i)));
 		return this;
 	}
 	public Polygon3D scale(double x, double y, double z) {
@@ -231,8 +231,9 @@ public class Polygon3D implements Comparable<Polygon3D> {
 				avePoint[i] /= pointCount;
 			double x = avePoint[0], y = avePoint[1]; //we want to look @ the center to hopefully avoid ties
 			return (int) Math.signum(p.unproject(x, y, 1) - unproject(x, y, 1));
-		} else //this will help deal with the multiple polygon case, but certainly not fix it :(
+		} else { //this will help deal with the multiple polygon case, but certainly not fix it :(
 //			return 0;
 			return (int) Math.signum(p.aveZ() - aveZ());
+		}
 	}
 }

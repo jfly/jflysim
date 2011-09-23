@@ -131,8 +131,8 @@ public class OldMegaminx extends TwistyPuzzle {
 		corner.addPoint(x-cornerHorzGap, 0, (cutRad+rad)/2.0);
 		
 		edge.addPoint(-edgeHorzGap, 0, cutRad);
-		edge.addPoint(m.multiply(edgeHorzGap, 0, cutRad));
-		edge.addPoint(m.multiply(x, 0, (cutRad+rad)/2.0 - edgeVertGap));
+		edge.addPoint(m.leftMultiply(edgeHorzGap, 0, cutRad));
+		edge.addPoint(m.leftMultiply(x, 0, (cutRad+rad)/2.0 - edgeVertGap));
 		edge.addPoint(-x, 0, (cutRad+rad)/2.0 - edgeVertGap);
 
 		for(int degree = 0; degree < 360; degree += increment) {

@@ -21,6 +21,7 @@ import java.awt.event.MouseMotionListener;
 import java.awt.geom.AffineTransform;
 import java.awt.geom.NoninvertibleTransformException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashSet;
 
 import javax.swing.JComponent;
@@ -102,10 +103,10 @@ public class Canvas3D extends JComponent implements KeyListener, ActionListener,
 			}
 			for(Shape3D s : shapes) {
 				//this is the old, baaad way of doing z ordering
-//				polys = s.getPolygons();
-//				Collections.sort(polys);
+				polys = s.getPolygons();
+				Collections.sort(polys);
 				
-				long start = System.nanoTime();
+				/*long start = System.nanoTime();
 				//implementing painter's algorithm
 				ArrayList<Polygon3D> oldPolys = s.getPolygons();
 				int polyCount = oldPolys.size();
@@ -155,7 +156,7 @@ public class Canvas3D extends JComponent implements KeyListener, ActionListener,
 						x_covered_by_y[i][j] = null;
 						x_covered_by_y[j][i] = null;
 					}
-				}
+				}*/
 				
 				polyProjection = new ArrayList<Shape>();
 				for(Polygon3D poly : polys) {
@@ -163,8 +164,9 @@ public class Canvas3D extends JComponent implements KeyListener, ActionListener,
 					polyProjection.add(proj);
 				}
 			}
-			if(!dragging || colorEditing)
+			if(!dragging || colorEditing) {
 				refreshSelectedPolygon();
+			}
 			repaint();
 			dirty = false;
 		}
