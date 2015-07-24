@@ -1,15 +1,18 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
-<project default="create_run_jar" name="Create Runnable Jar for Project jflysim">
-    <!--this file was created by Eclipse Runnable JAR Export Wizard-->
-    <!--ANT 1.7 is required                                        -->
-    <target name="create_run_jar">
-        <jar destfile="C:/cygwin/home/Jeremy/gitting/jflysim/GamesCubeMan.jar" filesetmanifest="mergewithoutmain">
+<project default="jar" name="Create Runnable Jar for Project jflysim">
+    <target name="clean">
+        <delete dir="build"/>
+    </target>
+    <target name="jar">
+        <mkdir dir="build/classes"/>
+        <javac srcdir="src" destdir="build/classes" classpath="plugin.jar" includeantruntime="false"/>
+        <jar destfile="build/jar/GamesCubeMan.jar" basedir="build/classes">
             <manifest>
                 <attribute name="Main-Class" value="edu.berkeley.gcweb.gui.gamescubeman.PuzzleUtils.GamesCubeMan"/>
                 <attribute name="Class-Path" value="."/>
             </manifest>
-            <fileset dir="C:/cygwin/home/Jeremy/gitting/jflysim/src"/>
-            <zipfileset excludes="META-INF/*.SF" src="C:/cygwin/home/Jeremy/gitting/jflysim/plugin.jar"/>
+            <fileset dir="src"/>
+            <zipfileset excludes="META-INF/*.SF" src="plugin.jar"/>
         </jar>
     </target>
 </project>
